@@ -9,6 +9,38 @@
 
 ---
 
+## Implementation Status
+
+### ✅ Implemented
+
+| Capability | Detail |
+|------------|--------|
+| **Auth & Multi-user** | Signup, login, demo credentials, Row Level Security per user |
+| **CSV Import** | PapaParse parsing, column auto-detection, manual entry, delete, search/filter |
+| **Dashboard** | Monthly income vs expense, daily spending chart (30d), category pie chart, budget alerts, recent transactions |
+| **Budget CRUD** | Set/edit/delete monthly limits per category with alerts |
+| **Receipt OCR** | Upload receipt photo → Groq vision model extracts details → saves as transaction |
+| **Recurring Subscriptions** | Auto-detection of monthly charges (20–35 day gap patterns) |
+| **Anomaly Detection** | Flags transactions > 2.5σ above user's mean |
+| **Spending Q&A** | Natural-language questions about transactions, categories, totals |
+| **Finance Summary** | Plain-English summary of income, expenses, and net |
+| **Cutback Suggestions** | Numbers-backed personalized suggestions |
+| **AI Memory** | User-defined key-value context remembered across sessions |
+| **Settings** | Profile (name, currency, pay day) + AI Memory management |
+| **Streaming responses** | Token-by-token output for faster perceived response time |
+
+### ❌ Not Yet Implemented (MOST OF THESE ARE NOT IMPLIMENTED BECAUSE I DONT HAVE ACCESS TO ANY PAID MODELS)
+
+| Gap | What's needed |
+|-----|---------------|
+| **Look up unfamiliar charges** | Web search / tool use for unrecognized merchants |
+| **Model routing** | Cheap model for simple lookups, expensive model only for complex reasoning (cost optimization) |
+| **Large context strategy** | Aggregation/pagination for users with years of data (currently capped at 500 txns) |
+| **CSV dedup at import** | Duplicate row detection during CSV ingestion |
+| **Receipt edge cases** | Blurry, rotated, cut-off, or non-English receipt handling |
+
+---
+
 ## Features
 
 ### Dashboard
@@ -35,10 +67,12 @@
 - Get spending summaries, category breakdowns, and budgeting advice
 - Powered by Groq (Llama 3.3 70B) — blazing fast inference
 - Conversation history persists across sessions
+- Upload receipt photos for automatic expense recording
 
 ### Settings
 - Profile management (name, currency, pay day)
 - Currency selection (USD, EUR, GBP, JPY, CAD, AUD)
+- AI Memory (key-value storage for user preferences)
 
 ---
 

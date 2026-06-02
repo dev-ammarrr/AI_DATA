@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Settings as SettingsIcon, User, Save, RefreshCw, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Save, RefreshCw, Check, Brain, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
@@ -13,6 +13,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [email, setEmail] = useState('');
+  const [memories, setMemories] = useState<{ id: string; key: string; value: string }[]>([]);
+  const [newMemory, setNewMemory] = useState('');
   const supabase = createClient();
   const router = useRouter();
 
@@ -28,6 +30,9 @@ export default function SettingsPage() {
         setCurrency(data.currency || 'USD');
         setPayDate(data.pay_date || 1);
       }
+
+      const { data: ctx } = await (supabase as any).from('user_context').select('*').eq('user_id', user.id);
+      if (ctx) setMemories(ctx);
       setLoading(false);
     })();
   }, [supabase]);
@@ -52,6 +57,24 @@ export default function SettingsPage() {
       router.refresh();
     }
     setSaving(false);
+  };
+
+  const handleAddMemory = async () => {
+    if (!newMemory.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await (supabase as any).from('user_context').insert(
+      { user_id: user.id, key: newMemory.trim(), value: newMemory.trim() }
+    ).select().maybeSingle();
+
+    if (data) setMemories(prev => [...prev, data]);
+    setNewMemory('');
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    await (supabase as any).from('user_context').delete().eq('id', id);
+    setMemories(prev => prev.filter(m => m.id !== id));
   };
 
   if (loading) {
@@ -138,6 +161,59 @@ export default function SettingsPage() {
               <h3 className="font-semibold text-gray-900">Account</h3>
               <p className="text-xs text-gray-400">Signed in as {email}</p>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
+              <Brain className="w-5 h-5 text-sky-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">AI Memory</h3>
+              <p className="text-xs text-gray-400">Things you want the AI to remember about your finances</p>
+            </div>
+          </div>
+
+          <div className="border-b border-gray-100 pb-4 mb-4">
+            <p className="text-xs font-medium text-gray-500 mb-3">Add a new memory</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMemory}
+                onChange={e => setNewMemory(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddMemory()}
+                placeholder="e.g. I get paid on the 1st"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+              />
+              <button
+                onClick={handleAddMemory}
+                disabled={!newMemory.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-black text-white text-sm font-medium hover:bg-gray-800 transition-all disabled:opacity-40"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {memories.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-6">No memories saved yet.</p>
+            )}
+            {memories.map(m => (
+              <div key={m.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-gray-800">{m.value}</div>
+                </div>
+                <button
+                  onClick={() => handleDeleteMemory(m.id)}
+                  className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-all flex-shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>

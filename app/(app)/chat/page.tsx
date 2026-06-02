@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { MessageSquare, Send, User, Bot, RefreshCw } from 'lucide-react';
+import { MessageSquare, Send, User, Bot, RefreshCw, Camera } from 'lucide-react';
 import type { ChatMessage } from '@/lib/supabase/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,8 +12,10 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [aiReady, setAiReady] = useState(true);
+  const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -34,6 +36,126 @@ export default function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const compressImage = (dataUrl: string, maxSize = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxSize || h > maxSize) {
+          const ratio = Math.min(maxSize / w, maxSize / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas 2D context unavailable')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = dataUrl;
+    });
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      try {
+        const compressed = await compressImage(base64);
+        setSelectedImage(compressed);
+        await sendWithImage(compressed);
+      } catch {
+        setSelectedImage(base64);
+        await sendWithImage(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const sendWithImage = async (imageBase64: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      user_id: user.id,
+      role: 'user',
+      content: '📷 Receipt photo',
+      metadata: null,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    await (supabase.from('chat_messages') as any).insert({
+      user_id: user.id,
+      role: 'user',
+      content: '📷 Receipt photo',
+    });
+
+    setSending(true);
+    setSelectedImage(null);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Extract this receipt and save it as a transaction' },
+              { type: 'image', image: imageBase64 },
+            ],
+          }],
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const assistantContent = data.content || data.message || 'No response';
+
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        role: 'assistant',
+        content: assistantContent,
+        metadata: null,
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages(prev => [...prev, assistantMsg]);
+      await (supabase.from('chat_messages') as any).insert({
+        user_id: user.id,
+        role: 'assistant',
+        content: assistantContent,
+      });
+    } catch (err: any) {
+      const fallbackMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        role: 'assistant',
+        content: `❌ **Receipt error**: ${err.message || 'Unknown error'}`,
+        metadata: null,
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+    }
+
+    setSending(false);
+  };
 
   const handleSubmit = async () => {
     if (!input.trim() || sending) return;
@@ -61,6 +183,18 @@ export default function ChatPage() {
 
     setSending(true);
 
+    const assistantId = crypto.randomUUID();
+    const assistantMsg: ChatMessage = {
+      id: assistantId,
+      user_id: user.id,
+      role: 'assistant',
+      content: '',
+      metadata: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, assistantMsg]);
+    setStreamingId(assistantId);
+
     try {
       const history = [...messages, userMsg].map(m => ({
         role: m.role,
@@ -75,36 +209,36 @@ export default function ChatPage() {
 
       if (!res.ok) throw new Error('API error');
 
-          const data = await res.json();
-          const assistantContent = data.content || data.message || 'No response';
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
 
-      const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        role: 'assistant',
-        content: assistantContent,
-        metadata: null,
-        created_at: new Date().toISOString(),
-      };
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullContent += chunk;
+        setMessages(prev =>
+          prev.map(m => (m.id === assistantId ? { ...m, content: fullContent } : m))
+        );
+      }
 
-      setMessages(prev => [...prev, assistantMsg]);
       await (supabase.from('chat_messages') as any).insert({
         user_id: user.id,
         role: 'assistant',
-        content: assistantContent,
+        content: fullContent,
       });
     } catch {
-      const fallbackMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        role: 'assistant',
-        content: "I'm having trouble connecting right now. Please make sure your GROQ_API_KEY is set in .env.local and try again.",
-        metadata: null,
-        created_at: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, fallbackMsg]);
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === assistantId
+            ? { ...m, content: "I'm having trouble connecting right now. Please make sure your GROQ_API_KEY is set in .env.local and try again." }
+            : m
+        )
+      );
     }
 
+    setStreamingId(null);
     setSending(false);
   };
 
@@ -174,7 +308,7 @@ export default function ChatPage() {
           </div>
         ))}
 
-        {sending && (
+        {sending && !streamingId && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
               <Bot className="w-4 h-4 text-sky-500" />
@@ -190,6 +324,22 @@ export default function ChatPage() {
 
       <div className="border-t border-gray-100 p-4 lg:px-8">
         <div className="flex items-center gap-2 max-w-4xl mx-auto">
+          <input
+            type="file"
+            ref={fileRef}
+            accept="image/*"
+            capture="environment"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={sending}
+            className="p-3 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all disabled:opacity-40 flex-shrink-0"
+            title="Upload receipt"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
           <input
             type="text"
             value={input}
