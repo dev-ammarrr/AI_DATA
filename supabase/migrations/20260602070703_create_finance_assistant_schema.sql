@@ -27,16 +27,19 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
   TO authenticated
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile"
   ON profiles FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   TO authenticated
@@ -66,22 +69,26 @@ CREATE INDEX IF NOT EXISTS transactions_date_idx ON transactions(date);
 CREATE INDEX IF NOT EXISTS transactions_user_date_idx ON transactions(user_id, date);
 CREATE INDEX IF NOT EXISTS transactions_category_idx ON transactions(user_id, category);
 
+DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
 CREATE POLICY "Users can view own transactions"
   ON transactions FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own transactions" ON transactions;
 CREATE POLICY "Users can insert own transactions"
   ON transactions FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own transactions" ON transactions;
 CREATE POLICY "Users can update own transactions"
   ON transactions FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own transactions" ON transactions;
 CREATE POLICY "Users can delete own transactions"
   ON transactions FOR DELETE
   TO authenticated
@@ -102,22 +109,26 @@ ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS budgets_user_id_idx ON budgets(user_id);
 
+DROP POLICY IF EXISTS "Users can view own budgets" ON budgets;
 CREATE POLICY "Users can view own budgets"
   ON budgets FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own budgets" ON budgets;
 CREATE POLICY "Users can insert own budgets"
   ON budgets FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own budgets" ON budgets;
 CREATE POLICY "Users can update own budgets"
   ON budgets FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own budgets" ON budgets;
 CREATE POLICY "Users can delete own budgets"
   ON budgets FOR DELETE
   TO authenticated
@@ -138,22 +149,26 @@ ALTER TABLE user_context ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS user_context_user_id_idx ON user_context(user_id);
 
+DROP POLICY IF EXISTS "Users can view own context" ON user_context;
 CREATE POLICY "Users can view own context"
   ON user_context FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own context" ON user_context;
 CREATE POLICY "Users can insert own context"
   ON user_context FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own context" ON user_context;
 CREATE POLICY "Users can update own context"
   ON user_context FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own context" ON user_context;
 CREATE POLICY "Users can delete own context"
   ON user_context FOR DELETE
   TO authenticated
@@ -174,16 +189,19 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS chat_messages_user_id_idx ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS chat_messages_created_at_idx ON chat_messages(user_id, created_at);
 
+DROP POLICY IF EXISTS "Users can view own chat messages" ON chat_messages;
 CREATE POLICY "Users can view own chat messages"
   ON chat_messages FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own chat messages" ON chat_messages;
 CREATE POLICY "Users can insert own chat messages"
   ON chat_messages FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own chat messages" ON chat_messages;
 CREATE POLICY "Users can delete own chat messages"
   ON chat_messages FOR DELETE
   TO authenticated

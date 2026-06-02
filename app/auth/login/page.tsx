@@ -4,13 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Eye, EyeOff, Loader2, TrendingUp } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,110 +31,66 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-black flex-col justify-between p-12">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-sky-400 rounded-lg flex items-center justify-center">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-white font-semibold text-xl tracking-tight">Finly</span>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <h1 className="text-[32px] font-semibold tracking-tight text-black">Sign in</h1>
+          <p className="text-[15px] text-gray-400 mt-2">Enter your email and password</p>
         </div>
-        <div>
-          <h2 className="text-white text-4xl font-semibold leading-tight mb-4">
-            Your money,<br />
-            finally understood.
-          </h2>
-          <p className="text-gray-400 text-lg leading-relaxed">
-            An AI-powered financial companion that learns your habits and helps you make smarter decisions.
-          </p>
-        </div>
-        <div className="flex gap-8">
+
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <div className="text-sky-400 text-2xl font-semibold">10+</div>
-            <div className="text-gray-500 text-sm mt-1">AI capabilities</div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              required
+              autoComplete="email"
+              className="w-full h-12 px-4 rounded-xl bg-gray-50 text-[15px] text-black placeholder-gray-400 border border-gray-200 focus:outline-none focus:border-sky-400 focus:bg-white transition-all"
+            />
           </div>
+
           <div>
-            <div className="text-sky-400 text-2xl font-semibold">Real-time</div>
-            <div className="text-gray-500 text-sm mt-1">Analysis</div>
-          </div>
-          <div>
-            <div className="text-sky-400 text-2xl font-semibold">100%</div>
-            <div className="text-gray-500 text-sm mt-1">Private</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-8 h-8 bg-sky-400 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-xl tracking-tight">Finly</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              autoComplete="current-password"
+              className="w-full h-12 px-4 rounded-xl bg-gray-50 text-[15px] text-black placeholder-gray-400 border border-gray-200 focus:outline-none focus:border-sky-400 focus:bg-white transition-all"
+            />
           </div>
 
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-500 mb-8">Sign in to your account</p>
+          {error && (
+            <p className="text-[13px] text-red-500 text-center">{error}</p>
+          )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all text-sm"
-              />
-            </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-12 rounded-xl bg-black text-white text-[15px] font-medium hover:bg-gray-900 active:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition-all text-sm pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+        <button
+          type="button"
+          onClick={() => { setEmail('abc@gmail.com'); setPassword('123456'); }}
+          className="w-full mt-3 h-12 rounded-xl border-2 border-sky-400 text-sky-500 text-[14px] font-semibold hover:bg-sky-50 transition-all"
+        >
+          Use demo account
+        </button>
 
-            {error && (
-              <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 active:bg-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="text-sky-500 font-medium hover:text-sky-600 transition-colors">
-              Create one
-            </Link>
-          </p>
-        </div>
+        <p className="mt-8 text-center text-[14px] text-gray-400">
+          Don&apos;t have an account?{' '}
+          <Link href="/auth/signup" className="text-sky-500 font-medium hover:text-sky-600 transition-colors">
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );

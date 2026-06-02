@@ -26,7 +26,7 @@ export default function TransactionsPage() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(500);
+    const { data } = await (supabase as any).from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(500);
     setTransactions(data || []);
     setLoading(false);
   }, [supabase]);
@@ -58,7 +58,7 @@ export default function TransactionsPage() {
             if (!isNaN(d.getTime())) parsedDate = format(d, 'yyyy-MM-dd');
           } catch {}
 
-          return { user_id: user.id, date: parsedDate || format(new Date(), 'yyyy-MM-dd'), description: descVal || 'Imported transaction', amount, category, type, source: 'csv' as const };
+          return { user_id: user.id, date: parsedDate || format(new Date(), 'yyyy-MM-dd'), description: descVal || 'Imported transaction', amount, category, type, source: 'csv' };
         }).filter(r => r.amount > 0 && r.description);
 
         if (toInsert.length === 0) {
@@ -67,7 +67,7 @@ export default function TransactionsPage() {
           return;
         }
 
-        const { error } = await supabase.from('transactions').insert(toInsert);
+        const { error } = await (supabase as any).from('transactions').insert(toInsert);
         if (error) {
           setImportResult(`Error: ${error.message}`);
         } else {
@@ -88,7 +88,7 @@ export default function TransactionsPage() {
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from('transactions').insert({
+    await (supabase as any).from('transactions').insert({
       user_id: user.id,
       date: newTx.date,
       description: newTx.description,
@@ -104,7 +104,7 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from('transactions').delete().eq('id', id);
+    await (supabase as any).from('transactions').delete().eq('id', id);
     setTransactions(prev => prev.filter(t => t.id !== id));
   };
 

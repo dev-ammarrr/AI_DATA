@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Finly — Personal Finance Assistant',
+  title: 'Revonix Finance',
   description: 'AI-powered personal finance management',
 };
 

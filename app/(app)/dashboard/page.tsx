@@ -47,12 +47,10 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const threeMonthsAgo = format(subMonths(new Date(), 3), 'yyyy-MM-dd');
-
     const [profileRes, txRes, budgetRes] = await Promise.all([
-      supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
-      supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', threeMonthsAgo).order('date', { ascending: false }),
-      supabase.from('budgets').select('*').eq('user_id', user.id),
+      (supabase as any).from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+      (supabase as any).from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+      (supabase as any).from('budgets').select('*').eq('user_id', user.id),
     ]);
 
     setUserName(profileRes.data?.full_name?.split(' ')[0] || 'there');
@@ -63,31 +61,36 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const now = new Date();
-  const monthStart = startOfMonth(now);
-  const monthEnd = endOfMonth(now);
+  const hasData = transactions.length > 0;
+
+  const latestDate = hasData
+    ? transactions.reduce((latest, t) => t.date > latest ? t.date : latest, transactions[0].date)
+    : new Date().toISOString();
+  const refDate = parseISO(latestDate);
+  const monthStart = startOfMonth(refDate);
+  const monthEnd = endOfMonth(refDate);
 
   const thisMonthTx = transactions.filter(t => {
     const d = parseISO(t.date);
     return d >= monthStart && d <= monthEnd;
   });
 
-  const lastMonthStart = startOfMonth(subMonths(now, 1));
-  const lastMonthEnd = endOfMonth(subMonths(now, 1));
+  const lastMonthStart = startOfMonth(subMonths(refDate, 1));
+  const lastMonthEnd = endOfMonth(subMonths(refDate, 1));
   const lastMonthTx = transactions.filter(t => {
     const d = parseISO(t.date);
     return d >= lastMonthStart && d <= lastMonthEnd;
   });
 
-  const totalSpent = thisMonthTx.filter(t => t.type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
-  const totalIncome = thisMonthTx.filter(t => t.type === 'credit').reduce((s, t) => s + Number(t.amount), 0);
-  const lastMonthSpent = lastMonthTx.filter(t => t.type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
+  const totalSpent = thisMonthTx.filter(t => (t as any).type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
+  const totalIncome = thisMonthTx.filter(t => (t as any).type === 'credit').reduce((s, t) => s + Number(t.amount), 0);
+  const lastMonthSpent = lastMonthTx.filter(t => (t as any).type === 'debit').reduce((s, t) => s + Number(t.amount), 0);
   const spendingChange = lastMonthSpent > 0 ? ((totalSpent - lastMonthSpent) / lastMonthSpent) * 100 : 0;
 
   const categoryBreakdown = thisMonthTx
-    .filter(t => t.type === 'debit')
+    .filter(t => (t as any).type === 'debit')
     .reduce((acc, t) => {
-      const cat = t.category || 'Uncategorized';
+      const cat = (t as any).category || 'Uncategorized';
       acc[cat] = (acc[cat] || 0) + Number(t.amount);
       return acc;
     }, {} as Record<string, number>);
@@ -97,19 +100,20 @@ export default function DashboardPage() {
     .slice(0, 6)
     .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }));
 
-  // Spending over 30 days chart
   const dailySpend: Record<string, number> = {};
+  const chartStart = subMonths(refDate, 1);
   for (let i = 29; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
+    const d = new Date(chartStart); d.setDate(d.getDate() + i);
     dailySpend[format(d, 'MMM d')] = 0;
   }
-  transactions.filter(t => t.type === 'debit').forEach(t => {
+  transactions.filter(t => (t as any).type === 'debit').forEach(t => {
     const label = format(parseISO(t.date), 'MMM d');
-    if (label in dailySpend) dailySpend[label] += Number(t.amount);
+    const key = Object.keys(dailySpend).find(k => k === label);
+    if (key) dailySpend[key] += Number(t.amount);
   });
   const chartData = Object.entries(dailySpend).map(([date, amount]) => ({ date, amount }));
 
-  const recurringTx = transactions.filter(t => t.is_recurring);
+  const recurringTx = transactions.filter(t => (t as any).is_recurring);
   const recurringTotal = recurringTx.reduce((s, t) => s + Number(t.amount), 0);
 
   const budgetAlerts = budgets.filter(b => {
@@ -125,15 +129,18 @@ export default function DashboardPage() {
     );
   }
 
-  const hasData = transactions.length > 0;
-
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {userName}
         </h1>
-        <p className="text-gray-500 mt-1 text-sm">{format(now, 'MMMM d, yyyy')}</p>
+        <p className="text-gray-500 mt-1 text-sm">
+          {format(refDate, 'MMMM yyyy')} overview
+          {latestDate !== new Date().toISOString().slice(0, 10) && (
+            <span className="text-gray-400"> · showing latest month with data</span>
+          )}
+        </p>
       </div>
 
       {!hasData ? (

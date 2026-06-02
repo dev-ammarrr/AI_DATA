@@ -42,7 +42,7 @@ export default function Sidebar() {
         <div className="w-8 h-8 bg-sky-400 rounded-lg flex items-center justify-center flex-shrink-0">
           <TrendingUp className="w-5 h-5 text-white" />
         </div>
-        <span className="font-semibold text-lg tracking-tight text-gray-900">Finly</span>
+        <span className="font-semibold text-lg tracking-tight text-gray-900">Revonix</span>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
@@ -91,7 +91,7 @@ export default function Sidebar() {
           <div className="w-7 h-7 bg-sky-400 rounded-lg flex items-center justify-center">
             <TrendingUp className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">Finly</span>
+          <span className="font-semibold text-lg tracking-tight">Revonix</span>
         </div>
         <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 rounded-lg hover:bg-gray-100">
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
